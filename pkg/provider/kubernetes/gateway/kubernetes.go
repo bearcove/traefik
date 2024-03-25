@@ -1815,6 +1815,12 @@ func loadMiddlewares(listener gatev1.Listener, prefix string, filters []gatev1.H
 			if err != nil {
 				return nil, fmt.Errorf("creating RedirectRegex middleware: %w", err)
 			}
+		case gatev1.HTTPRouteFilterRequestHeaderModifier:
+			var err error
+			middleware, err = createRequestHeaderModifierMiddleware(filter.RequestHeaderModifier)
+			if err != nil {
+				return nil, fmt.Errorf("creating RequestHeaderModifier middleware: %w", err)
+			}
 		default:
 			// As per the spec:
 			// https://gateway-api.sigs.k8s.io/api-types/httproute/#filters-optional
@@ -1867,6 +1873,29 @@ func createRedirectRegexMiddleware(scheme string, filter *gatev1.HTTPRequestRedi
 			Replacement: fmt.Sprintf("%s://${userinfo}%s%s/${path}", filterScheme, hostname, port),
 			Permanent:   statusCode == http.StatusMovedPermanently,
 		},
+	}, nil
+}
+
+func createRequestHeaderModifierMiddleware(filter *gatev1.HTTPHeaderFilter) (*dynamic.Middleware, error) {
+	var headers = &dynamic.Headers{}
+
+	// add is unsupported
+	if len(filter.Add) > 0 {
+		return nil, errors.New("in RequestHeaderModifier middleware, add is not supported (use set instead)")
+	}
+
+	// remove is unsupported
+	if len(filter.Remove) > 0 {
+		return nil, errors.New("in RequestHeaderModifier middleware, remove is not supported")
+	}
+
+	// set is supported
+	for _, header := range filter.Set {
+		headers.CustomRequestHeaders[string(header.Name)] = header.Value
+	}
+
+	return &dynamic.Middleware{
+		Headers: headers,
 	}, nil
 }
 
