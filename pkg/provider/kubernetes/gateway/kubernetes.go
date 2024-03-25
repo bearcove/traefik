@@ -1877,7 +1877,9 @@ func createRedirectRegexMiddleware(scheme string, filter *gatev1.HTTPRequestRedi
 }
 
 func createRequestHeaderModifierMiddleware(filter *gatev1.HTTPHeaderFilter) (*dynamic.Middleware, error) {
-	var headers = &dynamic.Headers{}
+	var headers = &dynamic.Headers{
+		CustomRequestHeaders: make(map[string]string),
+	}
 
 	// add is unsupported
 	if len(filter.Add) > 0 {
